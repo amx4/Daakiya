@@ -39,6 +39,7 @@ type Action =
   | { type: 'START_LOADING' }
   | { type: 'STOP_LOADING' }
   | { type: 'ADD_TO_HISTORY'; payload: HistoryItem }
+  | { type: 'SET_HISTORY'; payload: HistoryItem[] }
   | { type: 'SET_VARIABLES'; payload: Variable[] }
   | { type: 'LOAD_FROM_HISTORY'; payload: HistoryItem }
   | { type: 'CLEAR_HISTORY' }
@@ -57,6 +58,8 @@ function daakiyaReducer(state: State, action: Action): State {
     case 'ADD_TO_HISTORY':
         const newHistory = [action.payload, ...state.history].slice(0, 50);
         return { ...state, history: newHistory };
+    case 'SET_HISTORY':
+        return { ...state, history: action.payload };
     case 'SET_VARIABLES':
       return { ...state, variables: action.payload };
     case 'LOAD_FROM_HISTORY':
@@ -88,7 +91,7 @@ export default function DaakiyaApp() {
       const savedState = localStorage.getItem('daakiyaState');
       if (savedState) {
         const parsed = JSON.parse(savedState);
-        if (parsed.history) dispatch({ type: 'ADD_TO_HISTORY', payload: parsed.history[0] }); // A bit of a hack to fill history
+        if (parsed.history) dispatch({ type: 'SET_HISTORY', payload: parsed.history });
         if (parsed.variables) dispatch({ type: 'SET_VARIABLES', payload: parsed.variables });
         if (parsed.isAutoSaveEnabled !== undefined) {
             if (!parsed.isAutoSaveEnabled) dispatch({ type: 'TOGGLE_AUTOSAVE' });
@@ -190,7 +193,7 @@ export default function DaakiyaApp() {
                     <div className="text-center text-sm text-muted-foreground pt-10">No history yet.</div>
                 ) : (
                 <div className="space-y-2 pr-4">
-                    {state.history.map(item => (
+                    {state.history.filter(item => !!item.request).map(item => (
                         <Card key={item.id} className="cursor-pointer hover:bg-muted" onClick={() => dispatch({ type: 'LOAD_FROM_HISTORY', payload: item })}>
                             <CardContent className="p-3">
                                 <div className="font-semibold truncate">{item.request.method} {item.request.url || 'Untitled Request'}</div>
