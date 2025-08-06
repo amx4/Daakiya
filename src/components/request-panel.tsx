@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { KeyValueEditor } from './key-value-editor';
-import { Send, Sparkles } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { AiAssistantDialog } from './ai-assistant-dialog';
+import { parseCurl } from '@/lib/curl-parser';
+import { useToast } from '@/hooks/use-toast';
 
 interface RequestPanelProps {
   request: ApiRequest;
@@ -20,8 +22,38 @@ interface RequestPanelProps {
 const httpMethods: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
 export function RequestPanel({ request, onSend, onRequestChange, isLoading }: RequestPanelProps) {
+  const { toast } = useToast();
+
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onRequestChange({ ...request, url: e.target.value });
+  };
+  
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    if (pastedText.trim().toLowerCase().startsWith('curl')) {
+      e.preventDefault();
+      try {
+        const parsedRequest = parseCurl(pastedText);
+        onRequestChange({
+          ...request,
+          ...parsedRequest,
+          id: request.id, // Keep the same ID
+        });
+         toast({
+          title: "cURL command parsed",
+          description: "The request details have been imported.",
+        });
+      } catch (error) {
+        console.error("Failed to parse cURL command:", error);
+        toast({
+            title: "cURL Parse Error",
+            description: "Could not parse the cURL command. Please check the format.",
+            variant: "destructive",
+        });
+        // Fallback to just pasting the text if parsing fails
+        onRequestChange({ ...request, url: pastedText });
+      }
+    }
   };
 
   const handleMethodChange = (method: HttpMethod) => {
@@ -51,9 +83,10 @@ export function RequestPanel({ request, onSend, onRequestChange, isLoading }: Re
         </Select>
         <Input
           type="text"
-          placeholder="https://api.example.com/data"
+          placeholder="https://api.example.com/data or paste cURL command"
           value={request.url}
           onChange={handleUrlChange}
+          onPaste={handlePaste}
         />
         <AiAssistantDialog onGenerate={handleAiGenerate} />
         <Button onClick={onSend} disabled={isLoading || !request.url} className="w-[120px]">
