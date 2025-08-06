@@ -120,13 +120,24 @@ export default function DaakiyaApp() {
     dispatch({ type: 'START_LOADING' });
     dispatch({ type: 'SET_RESPONSE', payload: null });
     
-    // Add params to URL
-    const url = new URL(state.activeRequest.url);
-    state.activeRequest.params.forEach(p => {
-        if (p.enabled && p.key) {
-            url.searchParams.append(p.key, p.value);
-        }
-    });
+    let url;
+    try {
+        url = new URL(state.activeRequest.url);
+        state.activeRequest.params.forEach(p => {
+            if (p.enabled && p.key) {
+                url.searchParams.append(p.key, p.value);
+            }
+        });
+    } catch (error) {
+        toast({
+            title: "Invalid URL",
+            description: "Please enter a valid URL including the protocol (e.g., https://).",
+            variant: "destructive",
+        });
+        dispatch({ type: 'STOP_LOADING' });
+        return;
+    }
+
 
     const requestToSend = { ...state.activeRequest, url: url.toString() };
 
