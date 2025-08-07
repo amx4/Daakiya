@@ -8,62 +8,63 @@ function unquote(str: string): string {
 }
 
 export function parseCurl(curlCommand: string): Omit<ApiRequest, 'id' | 'name'> {
-    const cleanedCommand = curlCommand.replace(/\\s*\\\s*$/gm, ' ').replace(/\s\s+/g, ' ').trim();
-    const tokens = cleanedCommand.split(/\s+/);
+    const cleanedCommand = curlCommand.replace(/\\\s*\n\s*/g, ' ').trim();
     
     let url = '';
     let method: HttpMethod = 'GET';
     const headers: KeyValue[] = [];
     let body = '';
-    let dataFlag = false;
 
-    for (let i = 0; i < tokens.length; i++) {
-        const token = tokens[i];
+    // Simplified parsing logic
+    const urlMatch = cleanedCommand.match(/^(?:curl\s+)?(?:'|")?(https?:\/\/[^'"]+)(?:'|")?/);
+    if (urlMatch) {
+        url = urlMatch[1];
+    }
+    
+    const methodMatch = cleanedCommand.match(/-(?:-request|-X)\s+([A-Z]+)/);
+    if (methodMatch) {
+        method = methodMatch[1].toUpperCase() as HttpMethod;
+    }
 
-        if (token.toLowerCase() === 'curl' && !url) {
-            // Find the URL, which is typically the first argument not starting with -
-            let j = i + 1;
-            while(j < tokens.length && tokens[j].startsWith('-')) {
-                // Skip over flags to find the URL
-                j += 2; // Assuming flags have arguments
-            }
-             if (j < tokens.length) {
-                url = unquote(tokens[j]);
-                i=j; // continue parsing from after the URL
-            }
-            continue;
-        }
-
-        if (token === '--request' || token === '-X') {
-            method = tokens[++i].toUpperCase() as HttpMethod;
-        } else if (token === '--header' || token === '-H') {
-            const headerStr = unquote(tokens[++i]);
-            const [key, ...valueParts] = headerStr.split(/:\s*/);
-            if (key) {
-                headers.push({
-                    id: crypto.randomUUID(),
-                    key: key,
-                    value: valueParts.join(': '),
-                    enabled: true,
-                });
-            }
-        } else if (token === '--data' || token === '-d' || token === '--data-raw') {
-            body = unquote(tokens[++i]);
-            method = 'POST'; // Typically requests with data are POST
-        } else if (token.startsWith('http') && !url) {
-             url = unquote(token);
+    const headerRegex = /-(?:-header|-H)\s+'([^']+)'/g;
+    let match;
+    while ((match = headerRegex.exec(cleanedCommand)) !== null) {
+        const [key, ...valueParts] = match[1].split(/:\s*/);
+        if (key) {
+            headers.push({
+                id: crypto.randomUUID(),
+                key: key.trim(),
+                value: valueParts.join(': ').trim(),
+                enabled: true,
+            });
         }
     }
     
-    if (!url) {
-        // Fallback for url if it's the last argument.
-        const lastToken = tokens[tokens.length -1];
-        if (lastToken.startsWith('http')) {
-            url = unquote(lastToken);
+    const dataMatch = cleanedCommand.match(/-(?:-data|-d|--data-raw)\s+'([\s\S]*)'/);
+    if (dataMatch && dataMatch[1]) {
+        body = dataMatch[1].trim();
+        if(!methodMatch) { // if -X is not specified, it's a POST
+            method = 'POST';
+        }
+    } else {
+        const dataMatchUnquoted = cleanedCommand.match(/-(?:-data|-d|--data-raw)\s+([\s\S]*)/);
+        if(dataMatchUnquoted && dataMatchUnquoted[1] && !dataMatchUnquoted[1].includes('-H')) {
+             body = dataMatchUnquoted[1].trim();
+             if(!methodMatch) {
+                method = 'POST';
+             }
         }
     }
 
-
+    // A simple heuristic to find URL if it's not at the start
+    if (!url) {
+        const tokens = cleanedCommand.split(/\s+/);
+        const urlToken = tokens.find(t => t.startsWith('http') || (t.startsWith('"http') || t.startsWith("'http")));
+        if (urlToken) {
+            url = unquote(urlToken);
+        }
+    }
+    
     return {
         url,
         method,
