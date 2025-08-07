@@ -7,9 +7,6 @@ function substituteVariables(text: string, variables: (Variable | KeyValue)[]): 
   const activeVariables = variables.filter(v => v.enabled);
   for (const variable of activeVariables) {
     if (!variable.key) continue;
-    // Postman-style path variables: :variable
-    const pathRegex = new RegExp(`:${variable.key}`, 'g');
-    substitutedText = substitutedText.replace(pathRegex, variable.value);
     
     // Postman-style environment variables: {{variable}}
     const envRegex = new RegExp(`\\{\\{${variable.key}\\}\\}`, 'g');
@@ -29,21 +26,24 @@ export async function executeRequest(
   let substitutedUrl = substituteVariables(request.url, allVariables);
 
   try {
-      // Validate and create URL object *after* substitution
-      const url = new URL(substitutedUrl);
-      
-      // Append any remaining *enabled* params that were not used for substitution, as actual query params.
-      request.params
-        .filter(p => p.enabled && p.key && !request.url.includes(`:${p.key}`) && !request.url.includes(`{{${p.key}}}`))
-        .forEach(p => {
-          url.searchParams.append(p.key, p.value);
-        });
+    // Now that the main URL is substituted, append query params
+    const url = new URL(substitutedUrl);
 
-      substitutedUrl = url.toString();
+    request.params
+      .filter(p => p.enabled && p.key)
+      .forEach(p => {
+        // Only append if it wasn't a placeholder in the original URL
+        if (!request.url.includes(`{{${p.key}}}`)) {
+           url.searchParams.append(substituteVariables(p.key, allVariables), substituteVariables(p.value, allVariables));
+        }
+      });
+      
+    substitutedUrl = url.toString();
+
   } catch (error) {
-    // If the URL is invalid before query parameter appending, it might be because
-    // a variable contains the base URL. We'll proceed and let fetch handle it,
-    // as the final substitutedUrl might be valid.
+    // This can happen if substitutedUrl is still not a full valid URL.
+    // We'll let fetch handle it, as it might be a relative path.
+    console.warn("Could not construct URL object, proceeding with fetch:", error);
   }
 
 
