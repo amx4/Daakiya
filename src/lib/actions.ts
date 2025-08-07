@@ -41,8 +41,9 @@ export async function executeRequest(
 
       substitutedUrl = url.toString();
   } catch (error) {
-    // Silently fail, as the URL might be valid after variable substitution in the fetch call.
-    // This allows for variables like `{{base_url}}/path`
+    // If the URL is invalid before query parameter appending, it might be because
+    // a variable contains the base URL. We'll proceed and let fetch handle it,
+    // as the final substitutedUrl might be valid.
   }
 
 
@@ -62,6 +63,7 @@ export async function executeRequest(
       method: request.method,
       headers: headers,
       body: ['GET', 'HEAD'].includes(request.method) ? undefined : substitutedBody,
+      cache: 'no-store',
     });
 
     const endTime = Date.now();

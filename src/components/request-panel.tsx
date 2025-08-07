@@ -21,7 +21,7 @@ interface RequestPanelProps {
 
 const httpMethods: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
-const exampleRequest: Omit<ApiRequest, 'id' | 'params'> = {
+const exampleRequest: Omit<ApiRequest, 'id'> = {
   method: 'POST',
   url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={{GEMINI_API_KEY}}',
   headers: [
@@ -32,6 +32,7 @@ const exampleRequest: Omit<ApiRequest, 'id' | 'params'> = {
       enabled: true,
     },
   ],
+  params: [],
   body: JSON.stringify(
     {
       contents: [
@@ -94,7 +95,7 @@ export function RequestPanel({ request, onSend, onRequestChange, isLoading }: Re
   
   const handleLoadExample = () => {
     onRequestChange({
-        ...request, // Keep id and params
+        ...request, // Keep id
         ...exampleRequest
     });
     toast({
