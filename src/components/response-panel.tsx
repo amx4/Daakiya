@@ -1,15 +1,17 @@
 'use client';
 
-import type { ApiResponse } from '@/lib/types';
+import type { ApiRequest, ApiResponse } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from './ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { CodeSnippetViewer } from './code-snippet-viewer';
 
 interface ResponsePanelProps {
   response: ApiResponse | null;
   isLoading: boolean;
+  request: ApiRequest;
 }
 
 function PrettyPrintJson({ data }: { data: any }) {
@@ -23,7 +25,7 @@ function PrettyPrintJson({ data }: { data: any }) {
     }
 }
 
-export function ResponsePanel({ response, isLoading }: ResponsePanelProps) {
+export function ResponsePanel({ response, isLoading, request }: ResponsePanelProps) {
     if (isLoading) {
         return (
             <Card className="flex-1">
@@ -72,6 +74,7 @@ export function ResponsePanel({ response, isLoading }: ResponsePanelProps) {
                 <TabsList>
                     <TabsTrigger value="body">Body</TabsTrigger>
                     <TabsTrigger value="headers">Headers</TabsTrigger>
+                    <TabsTrigger value="code">Code</TabsTrigger>
                 </TabsList>
                 <TabsContent value="body" className="mt-4 flex-1 overflow-auto">
                     <PrettyPrintJson data={response.body} />
@@ -93,6 +96,9 @@ export function ResponsePanel({ response, isLoading }: ResponsePanelProps) {
                             ))}
                         </TableBody>
                     </Table>
+                </TabsContent>
+                 <TabsContent value="code" className="mt-4 flex-1 overflow-auto">
+                    <CodeSnippetViewer request={request} />
                 </TabsContent>
             </Tabs>
         </div>

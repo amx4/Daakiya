@@ -230,7 +230,7 @@ export default function DaakiyaApp() {
           onRequestChange={handleRequestChange}
           isLoading={state.isLoading}
         />
-        <ResponsePanel response={state.activeResponse} isLoading={state.isLoading} />
+        <ResponsePanel response={state.activeResponse} isLoading={state.isLoading} request={state.activeRequest} />
       </main>
     </div>
   );
