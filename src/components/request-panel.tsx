@@ -133,9 +133,9 @@ export function RequestPanel({ request, onSend, onRequestChange, isLoading }: Re
         </Button>
       </div>
 
-      <Tabs defaultValue="headers" className="w-full">
+      <Tabs defaultValue="params" className="w-full">
         <TabsList>
-          <TabsTrigger value="params">Query Params</TabsTrigger>
+          <TabsTrigger value="params">Params</TabsTrigger>
           <TabsTrigger value="headers">Headers</TabsTrigger>
           <TabsTrigger value="body">Body</TabsTrigger>
         </TabsList>
@@ -143,7 +143,7 @@ export function RequestPanel({ request, onSend, onRequestChange, isLoading }: Re
           <KeyValueEditor 
             items={request.params} 
             onChange={(params) => onRequestChange({...request, params})}
-            keyPlaceholder="Param"
+            keyPlaceholder="Key / Param"
             valuePlaceholder="Value"
           />
         </TabsContent>

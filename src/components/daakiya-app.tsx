@@ -120,28 +120,17 @@ export default function DaakiyaApp() {
     dispatch({ type: 'START_LOADING' });
     dispatch({ type: 'SET_RESPONSE', payload: null });
     
-    let url;
-    try {
-        url = new URL(state.activeRequest.url);
-        state.activeRequest.params.forEach(p => {
-            if (p.enabled && p.key) {
-                url.searchParams.append(p.key, p.value);
-            }
-        });
-    } catch (error) {
+    if (!state.activeRequest.url) {
         toast({
             title: "Invalid URL",
-            description: "Please enter a valid URL including the protocol (e.g., https://).",
+            description: "Please enter a URL.",
             variant: "destructive",
         });
         dispatch({ type: 'STOP_LOADING' });
         return;
     }
 
-
-    const requestToSend = { ...state.activeRequest, url: url.toString() };
-
-    const response = await executeRequest(requestToSend, state.variables);
+    const response = await executeRequest(state.activeRequest, state.variables);
     
     dispatch({ type: 'SET_RESPONSE', payload: response });
     dispatch({ type: 'STOP_LOADING' });
@@ -204,7 +193,7 @@ export default function DaakiyaApp() {
                     <div className="text-center text-sm text-muted-foreground pt-10">No history yet.</div>
                 ) : (
                 <div className="space-y-2 pr-4">
-                    {state.history.filter(item => !!item.request).map(item => (
+                    {state.history.filter(item => item && item.request).map(item => (
                         <Card key={item.id} className="cursor-pointer hover:bg-muted" onClick={() => dispatch({ type: 'LOAD_FROM_HISTORY', payload: item })}>
                             <CardContent className="p-3">
                                 <div className="font-semibold truncate">{item.request.method} {item.request.url || 'Untitled Request'}</div>

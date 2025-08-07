@@ -33,9 +33,4 @@ export interface HistoryItem {
   timestamp: number;
 }
 
-export interface Variable {
-    id: string;
-    key: string;
-    value: string;
-    enabled: boolean;
-}
+export interface Variable extends KeyValue {}
