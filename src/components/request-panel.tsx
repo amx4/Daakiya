@@ -106,6 +106,7 @@ export function RequestPanel({ request, onSend, onRequestChange, isLoading }: Re
 
   return (
     <div className="flex flex-col gap-4 p-4 rounded-lg bg-card border">
+        <div className="text-lg font-semibold truncate">{request.name || "New Request"}</div>
       <div className="flex gap-2">
         <Select value={request.method} onValueChange={handleMethodChange}>
           <SelectTrigger className="w-[120px] font-semibold">

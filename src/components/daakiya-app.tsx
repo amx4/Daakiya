@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useReducer, useEffect } from 'react';
-import type { ApiRequest, ApiResponse, HistoryItem, HttpMethod, Variable, KeyValue } from '@/lib/types';
+import React, { useState, useReducer, useEffect, useRef } from 'react';
+import type { ApiRequest, ApiResponse, HistoryItem, HttpMethod, Variable, KeyValue, TestCollection, TestCase } from '@/lib/types';
 import { executeRequest } from '@/lib/actions';
 import { RequestPanel } from '@/components/request-panel';
 import { ResponsePanel } from '@/components/response-panel';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { DaakiyaLogo } from '@/components/icons';
 import { VariableManager } from './variable-manager';
 import { useToast } from '@/hooks/use-toast';
-import { History, Trash2 } from 'lucide-react';
+import { History, Trash2, Upload } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
 import { Switch } from './ui/switch';
@@ -85,6 +85,7 @@ const initialState: State = {
 export default function DaakiyaApp() {
   const [state, dispatch] = useReducer(daakiyaReducer, initialState);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try {
@@ -165,6 +166,58 @@ export default function DaakiyaApp() {
       dispatch({ type: 'SET_RESPONSE', payload: null });
   }
 
+  const handleImportClick = () => {
+      fileInputRef.current?.click();
+  }
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+          try {
+              const content = e.target?.result as string;
+              const testCollection: TestCollection = JSON.parse(content);
+              
+              const historyItems: HistoryItem[] = testCollection.tests.map(testCase => {
+                  const request: ApiRequest = {
+                      id: crypto.randomUUID(),
+                      name: testCase.name,
+                      method: testCase.method,
+                      url: (testCollection.base_url || '') + testCase.endpoint,
+                      headers: testCase.headers ? Object.entries(testCase.headers).map(([key, value]) => ({ id: crypto.randomUUID(), key, value: String(value), enabled: true })) : [],
+                      params: testCase.query_params ? Object.entries(testCase.query_params).map(([key, value]) => ({ id: crypto.randomUUID(), key, value: String(value), enabled: true })) : [],
+                      body: testCase.body ? JSON.stringify(testCase.body, null, 2) : ''
+                  };
+                  return {
+                      id: request.id,
+                      request,
+                      response: null,
+                      timestamp: Date.now(),
+                  }
+              });
+
+              dispatch({ type: 'SET_HISTORY', payload: [...historyItems, ...state.history] });
+              toast({
+                  title: "Test Collection Imported",
+                  description: `Successfully imported "${testCollection.collection_name}".`
+              });
+
+          } catch (error: any) {
+              toast({
+                  title: "Import Failed",
+                  description: error.message || "Could not parse the JSON file. Please check the format.",
+                  variant: 'destructive',
+              });
+          }
+      };
+      reader.readAsText(file);
+
+      // Reset file input
+      if(event.target) event.target.value = '';
+  }
+
   return (
     <div className="flex h-screen bg-background text-foreground">
       <aside className="w-80 flex flex-col border-r">
@@ -178,7 +231,11 @@ export default function DaakiyaApp() {
         <div className="p-4 flex-grow flex flex-col min-h-0">
             <div className="flex justify-between items-center mb-2">
                 <h2 className="font-semibold flex items-center gap-2"><History className="w-4 h-4"/> History</h2>
-                <Button variant="ghost" size="icon" onClick={handleClearHistory}><Trash2 className="w-4 h-4"/></Button>
+                <div className="flex items-center">
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="application/json" />
+                    <Button variant="ghost" size="icon" onClick={handleImportClick} title="Import Test Collection"><Upload className="w-4 h-4"/></Button>
+                    <Button variant="ghost" size="icon" onClick={handleClearHistory} title="Clear History"><Trash2 className="w-4 h-4"/></Button>
+                </div>
             </div>
             <div className="flex items-center space-x-2 mb-4">
                 <Switch 
@@ -196,7 +253,7 @@ export default function DaakiyaApp() {
                     {state.history.filter(item => item && item.request).map(item => (
                         <Card key={item.id} className="cursor-pointer hover:bg-muted" onClick={() => dispatch({ type: 'LOAD_FROM_HISTORY', payload: item })}>
                             <CardContent className="p-3">
-                                <div className="font-semibold truncate">{item.request.method} {item.request.url || 'Untitled Request'}</div>
+                                <div className="font-semibold truncate">{item.request.name || `${item.request.method} ${item.request.url || 'Untitled Request'}`}</div>
                                 <div className="text-sm text-muted-foreground">{new Date(item.timestamp).toLocaleString()}</div>
                             </CardContent>
                         </Card>
