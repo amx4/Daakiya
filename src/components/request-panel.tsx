@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { KeyValueEditor } from './key-value-editor';
-import { Send } from 'lucide-react';
+import { Send, TestTube2 } from 'lucide-react';
 import { AiAssistantDialog } from './ai-assistant-dialog';
 import { parseCurl } from '@/lib/curl-parser';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,30 @@ interface RequestPanelProps {
 }
 
 const httpMethods: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+
+const exampleRequest: Omit<ApiRequest, 'id' | 'params'> = {
+  method: 'POST',
+  url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={{GEMINI_API_KEY}}',
+  headers: [
+    {
+      id: crypto.randomUUID(),
+      key: 'Content-Type',
+      value: 'application/json',
+      enabled: true,
+    },
+  ],
+  body: JSON.stringify(
+    {
+      contents: [
+        {
+          parts: [{ text: 'Write a story about a magic backpack.' }],
+        },
+      ],
+    },
+    null,
+    2
+  ),
+};
 
 export function RequestPanel({ request, onSend, onRequestChange, isLoading }: RequestPanelProps) {
   const { toast } = useToast();
@@ -67,6 +91,17 @@ export function RequestPanel({ request, onSend, onRequestChange, isLoading }: Re
     }
     onRequestChange(newRequest);
   };
+  
+  const handleLoadExample = () => {
+    onRequestChange({
+        ...request, // Keep id and params
+        ...exampleRequest
+    });
+    toast({
+        title: "Example Loaded",
+        description: "A sample Gemini API request has been loaded. Don't forget to set your GEMINI_API_KEY in the variables.",
+    });
+  }
 
   return (
     <div className="flex flex-col gap-4 p-4 rounded-lg bg-card border">
@@ -88,6 +123,10 @@ export function RequestPanel({ request, onSend, onRequestChange, isLoading }: Re
           onChange={handleUrlChange}
           onPaste={handlePaste}
         />
+        <Button variant="outline" size="icon" onClick={handleLoadExample} title="Load Example Request">
+            <TestTube2 className="h-4 w-4" />
+            <span className="sr-only">Load Example</span>
+        </Button>
         <AiAssistantDialog onGenerate={handleAiGenerate} />
         <Button onClick={onSend} disabled={isLoading || !request.url} className="w-[120px]">
           {isLoading ? 'Sending...' : <><Send className="mr-2 h-4 w-4" /> Send</>}
